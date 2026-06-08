@@ -256,43 +256,78 @@
     <script>
         const trucoLabels = ["TRUCO!", "SEIS!!!!!", "NOVE!!!!!!", "DOZE!!!!!!!"];
         let state = {
-            // Adicionado "timeoutId" para controlar o tempo do botão
             team1: { score: 0, wins: 0, labelIndex: 0, timeoutId: null },
             team2: { score: 0, wins: 0, labelIndex: 0, timeoutId: null }
         };
+
+        // --- FUNÇÕES DE MEMÓRIA (LOCALSTORAGE) ---
+        function saveState() {
+            // Pega o estado atual dos pontos, vitórias e os nomes digitados na tela
+            const dataToSave = {
+                team1: {
+                    score: state.team1.score,
+                    wins: state.team1.wins,
+                    name: document.getElementById('teamName1').innerText
+                },
+                team2: {
+                    score: state.team2.score,
+                    wins: state.team2.wins,
+                    name: document.getElementById('teamName2').innerText
+                }
+            };
+            // Salva no navegador do usuário
+            localStorage.setItem('churrascoScore', JSON.stringify(dataToSave));
+        }
+
+        function loadState() {
+            // Busca os dados salvos quando a página abre
+            const savedData = localStorage.getItem('churrascoScore');
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                state.team1.score = parsed.team1.score || 0;
+                state.team1.wins = parsed.team1.wins || 0;
+                state.team2.score = parsed.team2.score || 0;
+                state.team2.wins = parsed.team2.wins || 0;
+
+                // Restaura os nomes se eles existirem
+                if (parsed.team1.name) document.getElementById('teamName1').innerText = parsed.team1.name;
+                if (parsed.team2.name) document.getElementById('teamName2').innerText = parsed.team2.name;
+            }
+        }
+        // ------------------------------------------
 
         function changeScore(teamNum, amount) {
             const team = state[`team${teamNum}`];
             team.score = Math.max(0, team.score + amount);
             checkWinner(teamNum);
             updateDisplay();
+            saveState(); // Salva sempre que mudar os pontos
         }
 
         function handleTruco(teamNum) {
             const team = state[`team${teamNum}`];
             team.score += 3;
-            
-            // Avança para o próximo grito de Truco
+
             team.labelIndex = (team.labelIndex + 1) % trucoLabels.length;
             checkWinner(teamNum);
             updateDisplay();
+            saveState(); // Salva os pontos do Truco
 
-            // Se já tiver um tempo rodando, cancela para não atropelar os cliques rápidos
             if (team.timeoutId) {
                 clearTimeout(team.timeoutId);
             }
 
-            // Agenda a volta para a posição 0 ("TRUCO!") após 2 segundos
             team.timeoutId = setTimeout(() => {
                 team.labelIndex = 0;
                 updateDisplay();
-            }, 2000); // 2000 = 2 segundos. Pode alterar esse valor como preferir!
+            }, 2000);
         }
 
         function checkWinner(teamNum) {
             const team = state[`team${teamNum}`];
             if (team.score >= 12) {
                 team.wins++;
+                saveState(); // Salva a vitória antes de exibir a tela
                 showVictory(teamNum);
             }
         }
@@ -332,19 +367,30 @@
             state.team2.score = 0;
             state.team1.labelIndex = 0;
             state.team2.labelIndex = 0;
-            
-            // Limpa os tempos se o jogo for resetado enquanto o botão estava mudado
+
             clearTimeout(state.team1.timeoutId);
             clearTimeout(state.team2.timeoutId);
-            
+
             updateDisplay();
+            saveState(); // Salva a partida após ser zerada
         }
 
         function resetAll() {
             state.team1.wins = 0;
             state.team2.wins = 0;
+            // resetGame já chama o saveState no final
             resetGame();
         }
+
+        // --- INICIALIZAÇÃO DA PÁGINA ---
+        // 1. Carrega os dados da memória assim que a página é aberta
+        loadState();
+        // 2. Atualiza os números na tela
+        updateDisplay();
+
+        // 3. Garante que se o usuário editar o nome dos times, isso seja salvo na hora
+        document.getElementById('teamName1').addEventListener('input', saveState);
+        document.getElementById('teamName2').addEventListener('input', saveState);
     </script>
 </body>
 
